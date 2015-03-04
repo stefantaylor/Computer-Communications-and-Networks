@@ -1,0 +1,189 @@
+import java.io.*;
+import java.net.*;
+
+public class Sender2 {
+
+    public static void main(String args[]) throws Exception {
+        // Get the address, port and name of file from user input
+        InetAddress hostname = InetAddress.getByName(args[0]);
+        final int port = Integer.parseInt(args[1]);
+        final String fileName = args[2];
+
+        // Create the socket
+        DatagramSocket socket = new DatagramSocket();
+
+		//Instantiate the file
+        File file = new File(fileName);
+
+		//Create Stream to read file
+        InputStream inFromFile = new FileInputStream(file);
+
+        // Create a byte array to hold file data in bytes and populate it
+        byte[] fileinbytes = new byte[(int)file.length()];
+        inFromFile.read(fileinbytes);
+
+        // Create a flag to indicate the last payload
+        //boolean lastpayloadFlag = false;
+
+		//Sequence Number Variable
+		int seqno = 0;
+
+        // For each payload
+        for (int i=0; i < fileinbytes.length; i = i+1021 ) {
+
+            // Create new payload. 
+            byte[] payload = new byte[1024];
+
+            // Set flag to 1 if packet is last packet and store it in third byte of header
+            if ((i+1021) >= fileinbytes.length) {
+                for (int j=0; j < (fileinbytes.length - i) ;j++) {
+                    payload[j+3] = fileinbytes[i+j];
+                }
+                payload[2] = (byte)(1);
+            } else { // If not last packet, store flag as 0
+                for (int j=0; j <= 1020; j++) {
+                    payload[j+3] = fileinbytes[i+j];
+                }
+                payload[2] = (byte)(0);
+            }
+
+            // Copy the bytes for the payload to the payload array
+            /*if (lastpayloadFlag == false) {
+                for (int j=0; j <= 1020; j++) {
+                    payload[j+3] = fileinbytes[i+j];
+                }
+            } else if (lastpayloadFlag == true) { 
+                for (int j=0; j < (fileinbytes.length - i) ;j++) {
+                    payload[j+3] = fileinbytes[i+j];
+                }
+            }
+			*/
+			//add sequence number to payload
+            payload[0] = (byte)(seqno >> 8);
+            payload[1] = (byte)(seqno);
+
+            // Send the payload
+            DatagramPacket sendPacket = new DatagramPacket(payload, payload.length, hostname, port);
+            socket.send(sendPacket);
+            System.out.println("Sent: Sequence number = " + seqno + ", Flag = " + payload[2]);
+
+            // Sleep for 20 milliseconds to avoid sending too quickly
+            try {
+                Thread.sleep(20);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+			// Increment sequence number
+            seqno += 1;
+
+            
+        }
+
+        socket.close();
+        inFromFile.close();
+        System.out.println("File " + fileName + " has been sent");
+    }
+}
+
+
+/* Stefan Taylor 1006260 */
+
+//Sender1 - sends 1024 byte payloads via UDP
+
+// 1024 bytes, 2byte sequence number, 1 end of file byte, 1021 data bytes
+
+/*import java.io.*;
+import java.net.*;
+
+public class Sender1 {
+
+	public static void main(String[] args) throws Exception {
+		
+		// Get hostname, port and file from user input
+		InetAddress hostname = InetAddress.getByName(args[0]);
+		int port = Integer.parseInt(args[1]);
+		String filepath = args[2];
+		File file = new File(filepath);
+
+		// Convert file to a stream
+		FileInputStream inputstream = new FileInputStream(file);
+
+		// Create byte array the same length as the file
+		byte[] imageinbytes = new byte[(int) file.length()];
+
+		// Populate Byte Array
+		inputstream.read(imageinbytes);
+
+		// Declare variable for sequence number
+		int seqno = 0;
+		
+		// Declare variable for payload length (last payload might be shorter)
+		int payloadlength = 0;		
+
+		// Create another byte array to be used for each packet
+		byte[] payload = new byte[1024];
+
+		// Determine the number of packets which need to be sent
+		int numberofpackets = (int) Math.ceil(file.length() / 1021.0);
+
+		// Populate and send the packets
+		int bigindexcounter = 0;
+		int payloadoffset = 3;
+		
+		//Create Socket
+		DatagramSocket socket = new DatagramSocket();
+		
+		//Loop iterates once for each packet that needs to be sent
+		for (int i = 0; i < numberofpackets; i++) {
+			//Checks whether it is the last byte in the packet or not
+			if (file.length() - bigindexcounter > 1021){
+				//Loop iterates once for each data byte in the payload,
+				//populating those bytes, except for the last byte
+				for (int j = 0; j < 1021; j++){
+					payload[j+payloadoffset] = imageinbytes[bigindexcounter+j];
+				}
+				payloadlength = 1023;
+				test += 1021;
+			}
+			else {
+				//Loop populates the last byte
+				payloadlength = (int) (file.length() - bigindexcounter);
+				payload = new byte[payloadlength+payloadoffset];
+				System.out.println(payloadlength);
+				for (int j=0; j < payloadlength; j++){
+					System.out.println(j);
+					payload[j+payloadoffset] = imageinbytes[bigindexcounter+j];
+					test+=1;
+				}
+			}
+			if (i == numberofpackets -1){
+				payload[2] =  1;
+			}
+			else{
+				payload[2] = 0;	
+			}
+			payload[0] = (byte) (seqno >> 8);
+			payload[1] = (byte) (seqno);
+			
+			
+			//Create Packet
+			DatagramPacket packet = new DatagramPacket(payload, payloadlength, hostname, port);
+
+			//Send Packet
+			Thread.sleep(2);
+			socket.send(packet);
+			Thread.sleep(2);
+			System.out.println(i+1);
+
+			//System.out.println("SENT");
+			//update sequence number and counter			
+			seqno+=1;
+			bigindexcounter+=1021;
+			//socket.close();
+		}
+		
+		System.out.println(test);
+		imagestream.close();
+	}
+}*/

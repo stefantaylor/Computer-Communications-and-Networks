@@ -1,0 +1,91 @@
+/* Stefan Taylor 1006260 */
+
+//Sender1 - sends 1024 byte payloads via UDP
+
+// 1024 bytes, 2byte sequence number, 1 end of file byte, 1021 data bytes
+
+import java.io.*;
+import java.net.*;
+
+public class Sender1 {
+
+	public static void main(String[] args) throws Exception {
+		
+		// Get hostname, port and file from user input
+		InetAddress hostname = InetAddress.getByName(args[0]);
+		int port = Integer.parseInt(args[1]);
+		String filepath = args[2];
+		File file = new File(filepath);
+
+		// Create stream to read file
+		FileInputStream inputstream = new FileInputStream(file);
+
+		// Create byte array the same length as the file
+		byte[] fileinbytes = new byte[(int) file.length()];
+
+		// Populate Byte Array
+		inputstream.read(fileinbytes);
+
+		// Declare variable for sequence number
+		int seqno = 0;
+		
+		// Declare variable for payload length (last payload might be shorter)
+		int payloadlength = 0;		
+
+		// Determine the number of packets which need to be sent
+		int numberofpackets = (int) Math.ceil(file.length() / 1021.0);
+
+		// Populate and send the packets
+		int payloadoffset = 3;
+		
+		//Create Socket
+		DatagramSocket socket = new DatagramSocket();
+		//Loop iterates once for each packet that needs to be sent
+		for (int i = 0; i < numberofpackets; i++) {
+			
+			// Create another byte array to be used for each packet
+			byte[] payload = new byte[1024];
+			
+			//checks whether it is the last packet and sets eof bit accordingly
+			//adds file data to the payload
+			if (i == numberofpackets -1){
+				payload[2] =  1;
+				for (int j=0; j < (fileinbytes.length - (i*1021)) ;j++) {
+                    payload[j+payloadoffset] = fileinbytes[(i*1021)+j];
+                }
+			}
+			else{
+				payload[2] = 0;	
+				for (int j=0; j <= 1020; j++) {
+                    payload[j+payloadoffset] = fileinbytes[(i*1021)+j];
+                }
+			}
+
+			
+			//stores sequence number accross 2 bytes
+			payload[0] = (byte) (seqno >> 8);
+			payload[1] = (byte) (seqno);
+						
+						
+			//Create Packet
+			DatagramPacket packet = new DatagramPacket(payload, payloadlength, hostname, port);
+
+			//Send Packet
+			socket.send(packet);
+			System.out.println("Sent Packet " + (i+1) + " of " + numberofpackets + " flag " + payload[2]);
+			
+			//Sleep to prevent from sending too quickly
+			try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+			//Update sequence number			
+			seqno+=1;
+			
+		}
+		socket.close();
+		inputstream.close();
+	}
+}
